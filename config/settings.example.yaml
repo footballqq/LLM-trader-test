@@ -1,0 +1,35 @@
+initial_cash: 1000000
+
+market:
+  type: a_share  # 可选: a_share | crypto
+  provider: wind # a_share: wind; crypto: binance
+
+symbols:
+  - IF.CFE
+  - IC.CFE
+
+trading:
+  freq: 1m
+  session: ChinaCFE
+  slippage_bps: 1.0
+  slippage_abs: 0.0
+  commission: 0.0003
+  commission_per_lot: 0.0
+
+model:
+  llm: gpt-4o-mini
+  prompt: prompts/system_prompt.txt
+
+storage:
+  data_dir: data
+  cache: true
+
+ui:
+  refresh_secs: 5
+
+# 若使用加密行情（Binance），可在此设置密钥（仅行情可不填）
+binance:
+  api_key: ""
+  api_secret: ""
+
+

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "initial_cash": { "type": "number", "minimum": 0 },
+    "market": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["crypto", "a_share"] },
+        "provider": { "type": "string" }
+      },
+      "required": ["type", "provider"]
+    },
+    "symbols": { "type": "array", "items": { "type": "string" } },
+    "trading": {
+      "type": "object",
+      "properties": {
+        "freq": { "type": "string" },
+        "session": { "type": "string" },
+        "slippage_bps": { "type": "number" },
+        "slippage_abs": { "type": "number" },
+        "commission": { "type": "number" },
+        "commission_per_lot": { "type": "number" }
+      }
+    },
+    "model": {
+      "type": "object",
+      "properties": {
+        "llm": { "type": "string" },
+        "prompt": { "type": "string" }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "properties": {
+        "data_dir": { "type": "string" },
+        "cache": { "type": "boolean" }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "properties": {
+        "refresh_secs": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
+
+

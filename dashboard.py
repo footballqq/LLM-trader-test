@@ -14,6 +14,8 @@ import pandas as pd
 import streamlit as st
 from binance.client import Client
 from dotenv import load_dotenv
+from adapters.app_context import build_context
+from ui.dashboard_sections import section_market, section_positions, section_trades, section_stats_from_state, section_trade_stats
 
 logging.basicConfig(level=logging.INFO)
 
@@ -588,13 +590,35 @@ def main() -> None:
     decisions_df = get_ai_decisions()
     messages_df = get_ai_messages()
 
-    portfolio_tab, trades_tab, ai_tab = st.tabs(["Portfolio", "Trades", "AI Activity"])
+    # 新分区：基于统一上下文的行情/持仓/成交展示（A股/加密可切换）
+    market_tab, portfolio_tab, trades_tab, stats_tab, ai_tab = st.tabs(["Market", "Portfolio", "Trades", "Stats", "AI Activity"])
+
+    with market_tab:
+        cfg_path = os.getenv("APP_SETTINGS", str(BASE_DIR / "config" / "settings.example.yaml"))
+        ctx = build_context(cfg_path)
+        symbols = ctx.cfg.get("symbols", []) or []
+        freq = (ctx.cfg.get("trading", {}) or {}).get("freq", "1m")
+
+        for sym in symbols:
+            ohlcv = ctx.market.load_ohlcv(sym, freq=freq, limit=300)
+            if not ohlcv.empty:
+                last = float(ohlcv["close"].iloc[-1])
+                ctx.portfolio.mark_price(sym, last)
+            section_market(sym, ohlcv)
+
+        section_positions(ctx.portfolio)
+        section_trades(ctx.portfolio)
 
     with portfolio_tab:
         render_portfolio_tab(state_df, trades_df)
 
     with trades_tab:
         render_trades_tab(trades_df)
+
+    with stats_tab:
+        section_stats_from_state(state_df)
+        # 当启用执行桥时，市场页的 ctx.portfolio 会记录 fills；此处仍优先使用 CSV trades
+        section_trade_stats(trades_df)
 
     with ai_tab:
         render_ai_tab(decisions_df, messages_df)

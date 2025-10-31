@@ -22,6 +22,7 @@ import requests
 from requests.exceptions import RequestException, Timeout
 from binance.client import Client
 from dotenv import load_dotenv
+from adapters.execution_bridge import send_market_order
 from colorama import Fore, Style, init as colorama_init
 
 from hyperliquid_client import HyperliquidTradingClient
@@ -126,6 +127,9 @@ HYPERLIQUID_CAPITAL = _parse_float_env(
 )
 
 START_CAPITAL = HYPERLIQUID_CAPITAL if HYPERLIQUID_LIVE_TRADING else PAPER_START_CAPITAL
+
+# Execution Provider toggle (optional): when true, mirror trades to PaperTrader portfolio
+USE_EXECUTION_PROVIDER = _parse_bool_env(os.getenv("USE_EXECUTION_PROVIDER"), default=False)
 
 # Trading symbols to monitor
 SYMBOLS = ["ETHUSDT", "SOLUSDT", "XRPUSDT", "BTCUSDT", "DOGEUSDT", "BNBUSDT"]
@@ -1638,7 +1642,16 @@ def execute_entry(coin: str, decision: Dict[str, Any], current_price: float) -> 
             )
             return
     
-    # Open position
+    # 可选：同步到统一执行桥（不改变原有默认流程）
+    if USE_EXECUTION_PROVIDER:
+        symbol = COIN_TO_SYMBOL.get(coin, f"{coin}USDT")
+        side_for_bridge = "buy" if side == "long" else "sell"
+        try:
+            send_market_order(symbol=symbol, side=side_for_bridge, qty=quantity, ref_price=current_price)
+        except Exception as _:
+            pass
+
+    # Open position（原有逻辑保留）
     positions[coin] = {
         'side': side,
         'quantity': quantity,
@@ -1798,6 +1811,15 @@ def execute_close(coin: str, decision: Dict[str, Any], current_price: float) -> 
             )
             return
     
+    # 可选：同步到统一执行桥（不改变原有默认流程）
+    if USE_EXECUTION_PROVIDER:
+        symbol = COIN_TO_SYMBOL.get(coin, f"{coin}USDT")
+        side_for_bridge = "sell" if pos['side'] == 'long' else "buy"
+        try:
+            send_market_order(symbol=symbol, side=side_for_bridge, qty=pos['quantity'], ref_price=current_price)
+        except Exception as _:
+            pass
+
     # Return margin and add net PnL (after fees)
     balance += pos['margin'] + net_pnl
     
